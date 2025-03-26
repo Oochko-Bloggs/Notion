@@ -1,45 +1,51 @@
 import requests
 from bs4 import BeautifulSoup
 
-# URL of the CS2 tournaments page on Liquipedia
+# URL of the CS2 tournaments page on Pley.gg
 URL = "https://pley.gg/cs2-tournament-calendar/"
 
-# Send GET request to the webpage
-response = requests.get(URL, headers={"User-Agent": "NotionCS2Tracker/1.0 (your-email@example.com)"})
+# Send GET request with User-Agent
+response = requests.get(URL, headers={"User-Agent": "NotionCS2Tracker/1.0"})
 
-# Check if the request was successful
+# Check if request was successful
 if response.status_code == 200:
     soup = BeautifulSoup(response.text, "html.parser")
+    
+    events = []
+    current_event = None
 
-    # Find all <p> tags
-    all_paragraphs = soup.find_all("p")
-
-    # Initialize a flag to track when we're reading details for an event
-    event_name = None
-    event_details = []
-
-    # Loop through all <p> tags
-    for paragraph in all_paragraphs:
-        # Check if the <p> tag contains a <strong> tag (which holds the event name)
-        event_name_tag = paragraph.find("strong")
+    # Iterate through all elements: <h2> for months, <p> for events
+    for element in soup.find_all(["h2", "p"]):
+        if element.name == "h2":
+            # Skip <h2> because it's just a month name
+            continue
         
-        if event_name_tag:
-            # If event_name_tag is found, it means this <p> tag contains the event name
-            if event_name:  # If we already have an event name, process the previous event
-                # Now you have both event_name and event_details for the last event
-                print(f"Event Name: {event_name}")
-                print(f"Event Details: {event_details}")
-                print("-" * 30)  # Separator between events
-            # Set the new event name
-            event_name = event_name_tag.text.strip()
-            event_details = []  # Reset event details list for the new event
-        else:
-            # Collect details for the current event
-            event_details.append(paragraph.text.strip())
+        strong_tag = element.find("strong")  # Check if <p> has <strong> (Event Name)
+        
+        if strong_tag:
+            # If we found a new event, save the previous one
+            if current_event:
+                events.append(current_event)
 
-    # After the loop, we should print the last event details
-#    if event_name and event_details:
-#        print(f"Event Name: {event_name}")
-#        for details in event_details : print(f"\n{details}")
+            # Start a new event entry
+            current_event = {
+                "event_name": strong_tag.text.strip(),
+                "event_details": []
+            }
+        else:
+            # If it's a normal <p> and an event exists, add details
+            if current_event:
+                current_event["event_details"].append(element.text.strip())
+
+    # Add the last event after finishing the loop
+    if current_event:
+        events.append(current_event)
+
+    # Print extracted events
+    for event in events:
+        print("Event Name:", event["event_name"])
+        print("Event Details:", ", ".join(event["event_details"]))
+        print("-" * 30)
+
 else:
     print(f"Failed to fetch the page. Status Code: {response.status_code}")

@@ -11,13 +11,20 @@ end_date = None
 
 # URL of the Pley.gg website and your notion api
 URL = "https://pley.gg/cs2-tournament-calendar/"
-notion = Client(auth="")
-
 database_id = "https://www.notion.so/1c2a7d326ccf8054b7e9e4f79cfab4a6?v=1c2a7d326ccf80639211000c5f0cc711"
-# Set a custom User-Agent (important to prevent being blocked)
-HEADERS = {
+
+def usage():
+    if len(sys.argv) != 2:
+        print("Usage: Python3 scrapper.py [notion api]")
+        sys.exit(0)
+
+def connection(URL, API):
+    HEADERS = {
     "User-Agent": "NotionCS2Tracker/1.0"
-}
+    }
+    notion = Client(auth=API)
+    response = requests.get(URL, headers=HEADERS)
+    return response, notion
 
 def extract_datetime(details):
 	match = re.search(r'(\w+\s\d{1,2}[a-z]{2})\s–\s(\w+\s\d{1,2}[a-z]{2})', details)
@@ -35,11 +42,9 @@ def convert_to_standard_date(date_str):
     return parser.parse(date_str)
 
 
-# Send GET request to the webpage
-response = requests.get(URL, headers=HEADERS)
 
-# Check if the request was successful
-if response.status_code == 200:
+def scrap_info(response, notion):
+    if response.status_code == 200:
     soup = BeautifulSoup(response.text, "html.parser")
 
    
@@ -112,3 +117,17 @@ if response.status_code == 200:
 
 else:
     print(f"Failed to fetch the page. Status Code: {response.status_code}")
+
+
+def main():
+
+    usage()
+
+    API = sys.argv[1]
+    response, notion = connection(URL, API)
+    scrap_info(response, notion)
+
+
+if __name__ == "__main__":
+
+    main()
